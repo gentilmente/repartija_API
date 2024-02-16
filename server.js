@@ -55,7 +55,7 @@ app.get("/list-images", (req, res) => {
 
     // Filter out non-image files if necessary
     const imageFiles = files.filter((file) =>
-      /\.(jpg|jpeg|png|gif)$/i.test(file)
+      /\.(jpg|jpeg|png|webp|gif)$/i.test(file)
     );
 
     // Return a list of image file names
