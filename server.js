@@ -65,6 +65,14 @@ app.post("/upload", upload.single("image"), (req, res) => {
   );
 });
 
+app.get("/status", (req, res) => {
+  res.status(200).json({
+    status: "success",
+    message: "Server is healthy",
+    timestamp: new Date(),
+  });
+});
+
 app.listen(port, () => {
   console.log(`Server running at http://localhost:${port}`);
 });
