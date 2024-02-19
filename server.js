@@ -1,75 +1,70 @@
 const express = require("express");
 const multer = require("multer");
+const { google } = require("googleapis");
+const cors = require("cors");
+const { Readable } = require("stream"); // Import Readable from the 'stream' module
 const app = express();
 const port = 3000;
-const cors = require("cors");
-const fs = require("fs");
-const path = require("path");
+require("dotenv").config();
+console.log(process.env);
+app.use(cors());
 
-app.use(
-  cors({
-    origin: "*", // Or use '*' to allow all origins
-  })
+// Initialize multer with memory storage
+const upload = multer({ storage: multer.memoryStorage() });
+
+// Configure Google Drive Service Account
+const serviceAccount = require("./credentials.json"); // Update the path to your service account file
+const scopes = ["https://www.googleapis.com/auth/drive.file"]; // Ensure the scope is correct for uploading files
+const auth = new google.auth.JWT(
+  process.env.CLIENT_EMAIL,
+  null,
+  process.env.PRIVATE_KEY,
+  scopes
 );
-app.use("/uploads", express.static("./uploads"));
+const drive = google.drive({ version: "v3", auth });
 
-// Ensure uploads directory exists
-const uploadDir = "uploads";
-if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir, { recursive: true });
-}
-
-// Set up file storage
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    cb(null, uploadDir);
-  },
-  filename: function (req, file, cb) {
-    cb(
-      null,
-      file.fieldname +
-        "-" +
-        Date.now() +
-        "." +
-        file.originalname.split(".").pop()
-    );
-  },
-});
-
-const upload = multer({ storage: storage });
-
-// Routes
 app.post("/upload", upload.single("image"), (req, res) => {
-  // You can perform actions with the uploaded file here
-  res.json({ message: "File upload successful" });
-});
+  if (!req.file) {
+    return res.status(400).send("No file uploaded.");
+  }
 
-app.get("/list-images", (req, res) => {
-  const uploadsDir = path.join(__dirname, "uploads");
+  const file = req.file;
+  const folderId = process.env.FOLDER_ID; // Replace with your Google Drive folder ID
 
-  fs.readdir(uploadsDir, (err, files) => {
-    if (err) {
-      console.log(err);
-      return res.status(500).json({ message: "Failed to list images" });
+  const fileMetadata = {
+    name: file.originalname,
+    parents: [folderId],
+  };
+
+  // Convert the buffer to a stream
+  const media = {
+    mimeType: file.mimetype,
+    body: Readable.from(file.buffer),
+  };
+
+  drive.files.create(
+    {
+      resource: fileMetadata,
+      media: media,
+      fields: "id",
+    },
+    (err, file) => {
+      if (err) {
+        console.error("Error uploading to Google Drive:", err);
+        return res.status(500).send({
+          message: "Error uploading to Google Drive.",
+          error: err.toString(),
+        });
+      }
+      res.send({
+        success: true,
+        fileId: file.data.id,
+        message: "File uploaded successfully to Google Drive.",
+      });
     }
-
-    // Filter out non-image files if necessary
-    const imageFiles = files.filter((file) =>
-      /\.(jpg|jpeg|png|webp|gif)$/i.test(file)
-    );
-
-    // Return a list of image file names
-    res.json(imageFiles);
-  });
+  );
 });
 
-app.get("/status", (req, res) => {
-  res.status(200).json({
-    status: "success",
-    message: "Server is healthy",
-    timestamp: new Date(),
-  });
-});
 app.listen(port, () => {
   console.log(`Server running at http://localhost:${port}`);
 });
