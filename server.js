@@ -6,7 +6,6 @@ const { Readable } = require("stream"); // Import Readable from the 'stream' mod
 const app = express();
 const port = 3000;
 require("dotenv").config();
-console.log(process.env);
 app.use(cors());
 
 // Initialize multer with memory storage
