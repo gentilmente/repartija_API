@@ -12,7 +12,6 @@ app.use(cors());
 const upload = multer({ storage: multer.memoryStorage() });
 
 // Configure Google Drive Service Account
-const serviceAccount = require("./credentials.json"); // Update the path to your service account file
 const scopes = ["https://www.googleapis.com/auth/drive.file"]; // Ensure the scope is correct for uploading files
 const auth = new google.auth.JWT(
   process.env.CLIENT_EMAIL,
